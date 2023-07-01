@@ -40,8 +40,6 @@ app.post("/participants", async (req, res) => {
 
   const validationMessages = schemaMessages.validate(req.body, {abortEarly: false});
 
-  console.log(validationMessages)
-
   if (validationMessages.error) {
     const errors = validationMessages.error.details.map((detail) => detail.message); /* tratamento da validação messages */
     console.log(errors);
@@ -65,6 +63,17 @@ app.post("/participants", async (req, res) => {
   } catch (err) {
     res.status(500).send(err.message);
   }
+});
+
+app.get("participants", async (req, res) => {
+
+	try {
+		const activeParticipants = await db.collection("participants").find().toArray();
+
+		if (activeParticipants === undefined) {return res.status(404).send("[]")};
+		res.send(activeParticipants);
+
+	} catch (error) {res.status(500).send(error.message)}
 });
 
 const PORT = 5000;
