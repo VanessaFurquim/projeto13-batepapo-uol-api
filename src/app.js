@@ -22,25 +22,13 @@ try {
 
 const db = mongoClient.db();
 
-const timeStamp = dayjs();
-/* const date = Date.now(); */
-
 app.post("/participants", async (req, res) => {
   const { name } = req.body; /* recebendo objeto do cliente */
-  const time = timeStamp.format("HH:mm:ss");
 
   const schemaParticipants = joi.object({
     name: joi.string().required()
   });
-
-  const schemaMessages = joi.object({
-    from: joi.string(name).required(),
-    to: joi.string("Todos").required(),
-    text: joi.string("entra na sala...").required(),
-    type: joi.string("status").required(),
-    time: joi.string(time).required()
-  });
-  /* formato dos objetos para validação */
+  /* formato do objeto para validação */
 
   const validationParticipant = schemaParticipants.validate(req.body, {abortEarly: false});
 
@@ -61,11 +49,17 @@ app.post("/participants", async (req, res) => {
   }
 
   try {
-    const participant = await db.collection("participants").findOne({ name: name });
+    const participant = await db.collection("participants").findOne({ name: name }); /* condição de participante existente */
     if (participant) return res.sendStatus(409);
 
-    await db.collection("participants").insertOne({ name: name /* lastStatus: Date.now() */ });
-    await db.collection("messages").insertOne({});
+    await db.collection("participants").insertOne({ name: name, lastStatus: Date.now() });
+    await db.collection("messages").insertOne({
+		from: name,
+		to: "Todos",
+		text: "entra na sala...",
+		type: "status",
+		time: dayjs().format("HH:mm:ss")
+	  });
 
     res.sendStatus(201); /* enviando resposta para o cliente */
   } catch (err) {
