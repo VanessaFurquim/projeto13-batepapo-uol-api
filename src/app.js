@@ -126,5 +126,19 @@ app.get("messages", async (req, res) => {
 	}  catch (error) {res.status(500).send(error.message)};
 });
 
+app.post("status", async (req, res) => {
+	const { User } = req.headers;
+
+	try {
+		const activeParticipant = await db.collection("participants").findOne(User);
+
+	if (!User || !activeParticipant) return res.sendStatus(404);
+
+	await db.collection("participants").updateOne({ $set: { lastStatus: Date.now() } });
+	res.sendStatus(200);
+
+	} catch (error) {res.status(500).send(error.message)}
+});
+
 const PORT = 5000;
 app.listen(PORT, () => console.log(`Server active on port ${PORT}.`));
