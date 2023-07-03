@@ -57,7 +57,7 @@ app.post("/participants", async (req, res) => {
   }
 });
 
-app.get("participants", async (req, res) => {
+app.get("/participants", async (req, res) => {
 
 	try {
 		const activeParticipants = await db.collection("participants").find().toArray();
@@ -68,9 +68,11 @@ app.get("participants", async (req, res) => {
 	} catch (error) {res.status(500).send(error.message)};
 });
 
-app.post("messages", async (req, res) => {
+app.post("/messages", async (req, res) => {
 	const { to, text, type } = req.body;
 	const { User } = req.headers;
+
+	console.log(User)
 
 	const schemaMessages = joi.object({
 		to: joi.string().required(),
@@ -87,9 +89,11 @@ app.post("messages", async (req, res) => {
 	};
 
 	try {
-		const activeParticipant = await db.collection("participants").findOne({ User }).toArray();
+		const activeParticipant = await db.collection("participants").findOne({ User });
 
-		if (!activeParticipant) {return res.sendStatus(404)};
+		console.log(activeParticipant)
+
+		if (!activeParticipant) {return res.sendStatus(422)};
 
 		await db.collection("messages").insertOne({
 			from: User,
@@ -104,7 +108,7 @@ app.post("messages", async (req, res) => {
 	} catch (error) {res.status(500).send(error.message)};
 });
 
-app.get("messages", async (req, res) => {
+app.get("/messages", async (req, res) => {
 	const { User } = req.headers;
 	const limit = parseInt(req.query.limit);
 
@@ -126,7 +130,7 @@ app.get("messages", async (req, res) => {
 	}  catch (error) {res.status(500).send(error.message)};
 });
 
-app.post("status", async (req, res) => {
+app.post("/status", async (req, res) => {
 	const { User } = req.headers;
 
 	try {
