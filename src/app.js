@@ -122,7 +122,7 @@ app.get("/messages", async (request, response) => {
 		if (!limit) { return response.send(messagesForUser) }
 
 		if (limit && isLimitValid === true) {
-			const FilteredMessagesByLimit = messagesForUser.slice(-parseInt(limit)).inverse()
+			const FilteredMessagesByLimit = messagesForUser.slice(-parseInt(limit)).reverse()
 
 			response.send(FilteredMessagesByLimit)
 		}
