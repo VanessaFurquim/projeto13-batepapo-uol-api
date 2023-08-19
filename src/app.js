@@ -156,14 +156,14 @@ app.post("/status", async (request, response) => {
 	const { user } = request.headers
 
 	try {
-		const activeParticipant = await db.collection("participants").findOne(user)
+		const IsParticipantActive = await db.collection("participants").findOne( { name: user } )
 
-	if (!user || !activeParticipant) return response.sendStatus(404)
+		if (!user || user === undefined || !IsParticipantActive) { return response.sendStatus(404) }
 
-	await db.collection("participants").updateOne({ name: user }, { $set: { lastStatus: Date.now() } })
-	response.sendStatus(200)
+		await db.collection("participants").updateOne( { name: user }, { $set: { lastStatus: Date.now() } } )
+		response.sendStatus(200)
 
-	} catch (error) {response.status(500).send(error.message)}
+	} catch (error) { response.status(500).send(error.message) }
 })
 
 // function removeInactiveParticipants() {
