@@ -22,11 +22,11 @@ try {
 
 const db = mongoClient.db()
 
-const participantsSchema = joi.object({
+const participantSchema = joi.object({
     name: joi.string().required()
 })
 
-const messagesSchema = joi.object({
+const messageSchema = joi.object({
 	to: joi.string().required(),
 	text: joi.string().required(),
 	type: joi.string().valid("message", "private_message").required()
@@ -35,7 +35,7 @@ const messagesSchema = joi.object({
 app.post("/participants", async (request, response) => {
   const { name } = request.body
 
-  const validationParticipant = participantsSchema.validate( request.body, { abortEarly: false } )
+  const validationParticipant = participantSchema.validate( request.body, { abortEarly: false } )
 
   if (validationParticipant.error) {
     const errors = validationParticipant.error.details.map(detail => detail.message)
@@ -64,7 +64,8 @@ app.get("/participants", async (request, response) => {
 	try {
 		const activeParticipants = await db.collection("participants").find().toArray()
 
-		if (activeParticipants === undefined) {return response.status(404).send(activeParticipants)}
+		if (!activeParticipants) {return response.status(404).send(activeParticipants)}
+
 		response.send(activeParticipants)
 
 	} catch (error) {response.status(500).send(error.message)}
@@ -74,7 +75,7 @@ app.post("/messages", async (request, response) => {
 	const { to, text, type } = request.body
 	const { user } = request.headers
 
-	const validationMessage = messagesSchema.validate( request.body, { abortEarly: false } )
+	const validationMessage = messageSchema.validate( request.body, { abortEarly: false } )
 
 	if (validationMessage.error) {
 		const errors = validationMessage.error.details.map(detail => detail.message)
@@ -82,9 +83,9 @@ app.post("/messages", async (request, response) => {
 	}
 
 	try {
-		const participantIsActive = await db.collection("participants").findOne( { name: user } )
+		const IsParticipantActive = await db.collection("participants").findOne( { name: user } )
 
-		if (!participantIsActive /*|| participantIsActive.name !== user*/) { return response.sendStatus(422) }
+		if (!IsParticipantActive || IsParticipantActive.name !== user) { return response.sendStatus(422) }
 
 		await db.collection("messages").insertOne( {
 			from: user,
@@ -116,14 +117,12 @@ app.get("/messages", async (request, response) => {
 			]
 		}).toArray()
 
-		if (!messagesForUser || messagesForUser === []) { return response.status(404).send("Não há nenhuma mensagem ainda.") }
-
 		if (isLimitValid === false) { return response.sendStatus(422) }
 
 		if (!limit) { return response.send(messagesForUser) }
 
 		if (limit && isLimitValid === true) {
-			const FilteredMessagesByLimit = messagesForUser.slice(-parseInt(limit))
+			const FilteredMessagesByLimit = messagesForUser.slice(-parseInt(limit)).inverse()
 
 			response.send(FilteredMessagesByLimit)
 		}
