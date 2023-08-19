@@ -26,11 +26,11 @@ const participantsSchema = joi.object({
     name: joi.string().required()
 })
 
-// const messagesSchema = joi.object({
-// 	to: joi.string().required(),
-// 	text: joi.string().required(),
-// 	type: joi.string().valid("message", "private_message").required()
-// })
+const messagesSchema = joi.object({
+	to: joi.string().required(),
+	text: joi.string().required(),
+	type: joi.string().valid("message", "private_message").required()
+})
 
 app.post("/participants", async (request, response) => {
   const { name } = request.body
@@ -74,12 +74,6 @@ app.post("/messages", async (request, response) => {
 	const { to, text, type } = request.body
 	const { user } = request.headers
 
-	const messagesSchema = joi.object({
-		to: joi.string().required(),
-		text: joi.string().required(),
-		type: joi.string().valid("message", "private_message").required()
-	})
-
 	const validationMessage = messagesSchema.validate( request.body, { abortEarly: false } )
 
 	if (validationMessage.error) {
@@ -90,7 +84,7 @@ app.post("/messages", async (request, response) => {
 	try {
 		const participantIsActive = await db.collection("participants").findOne( { name: user } )
 
-		if (!participantIsActive) { return response.sendStatus(422) }
+		if (!participantIsActive /*|| participantIsActive.name !== user*/) { return response.sendStatus(422) }
 
 		await db.collection("messages").insertOne( {
 			from: user,
@@ -105,63 +99,59 @@ app.post("/messages", async (request, response) => {
 	
 })
 
-// app.post("/messages", async (request, response) => {
-// 	const { to, text, type } = request.body
-// 	const { user } = request.headers
-
-// 	/* formato de uma mensagem:
-
-// 		{
-// 			from: 'João',
-// 			to: 'Todos',
-// 			text: 'oi galera',
-// 			type: 'message',
-// 			time: '20:04:37'
-// 		}
-// 	*/
-
-// 	const validationMessages = schemaMessages.validate(request.body, {abortEarly: false})
-
-// 	if (validationMessages.error) {
-// 		const errors = validationMessages.error.details.map(detail => detail.message)
-// 		return res.status(422).send(errors)
-// 	}
-
-// 	try {
-// 		const activeParticipant = await db.collection("participants").findOne( {name: user } )
-
-// 		console.log(activeParticipant)
-
-// 		if (!activeParticipant || activeParticipant.name !== user) {return response.sendStatus(422)}
-
-// 		await db.collection("messages").insertOne({from: user, to, text, type, time: dayjs().format("HH:mm:ss")})
-
-// 		res.sendStatus(201)
-
-// 	} catch (error) {response.status(500).send(error.message)}
-// })
-
 app.get("/messages", async (request, response) => {
 	const { user } = request.headers
-	const limit = parseInt(request.query.limit)
+	const { limit } = request.query
+
+	let isLimitValid
+
+	(limit <= 0 || (isNaN(limit) === true)) ? isLimitValid = false : isLimitValid = true
 
 	try {
-		const messagesForUser = await db.collection("messages").find({ $or: [ { type: "message" }, { to: user }, {from: user }, {to: "Todos"} ] })
+		const messagesForUser = await db.collection("messages").find({ $or: [
+			 { type: "message" },
+			 {to: "Todos"},
+			 { to: user },
+			 {from: user }
+			]
+		}).toArray()
 
-		switch (limit) {
-			case !limit:
-				response.send(messagesForUser)
-				break
-			case limit > 0:
-				const limitedMessages = messagesForUser.slice((limit))
-				response.send(limitedMessages)
-				break
-			case limit <= 0:
-				response.sendStatus(422)
-				break
-		};
-	}  catch (error) {response.status(500).send(error.message)};
+		if (!messagesForUser || messagesForUser === []) { return response.status(404).send("Não há nenhuma mensagem ainda.") }
+
+		if (isLimitValid === false) { return response.sendStatus(422) }
+
+		if (!limit) { return response.send(messagesForUser) }
+
+		if (limit && isLimitValid === true) {
+			const FilteredMessagesByLimit = messagesForUser.slice(-parseInt(limit))
+
+			response.send(FilteredMessagesByLimit)
+		}
+
+	} catch (error) {response.status(500).send(error.message) }
 })
+
+// app.get("/messages", async (request, response) => {
+// 	const { user } = request.headers
+// 	const limit = parseInt(request.query.limit)
+
+// 	try {
+// 		const messagesForUser = await db.collection("messages").find({ $or: [ { type: "message" }, { to: user }, {from: user }, {to: "Todos"} ] })
+
+// 		switch (limit) {
+// 			case !limit:
+// 				response.send(messagesForUser)
+// 				break
+// 			case limit > 0:
+// 				const limitedMessages = messagesForUser.slice((limit))
+// 				response.send(limitedMessages)
+// 				break
+// 			case limit <= 0:
+// 				response.sendStatus(422)
+// 				break
+// 		};
+// 	}  catch (error) {response.status(500).send(error.message)};
+// })
 
 app.post("/status", async (request, response) => {
 	const { user } = request.headers
