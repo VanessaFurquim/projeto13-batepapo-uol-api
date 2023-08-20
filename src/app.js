@@ -130,28 +130,6 @@ app.get("/messages", async (request, response) => {
 	} catch (error) {response.status(500).send(error.message) }
 })
 
-// app.get("/messages", async (request, response) => {
-// 	const { user } = request.headers
-// 	const limit = parseInt(request.query.limit)
-
-// 	try {
-// 		const messagesForUser = await db.collection("messages").find({ $or: [ { type: "message" }, { to: user }, {from: user }, {to: "Todos"} ] })
-
-// 		switch (limit) {
-// 			case !limit:
-// 				response.send(messagesForUser)
-// 				break
-// 			case limit > 0:
-// 				const limitedMessages = messagesForUser.slice((limit))
-// 				response.send(limitedMessages)
-// 				break
-// 			case limit <= 0:
-// 				response.sendStatus(422)
-// 				break
-// 		};
-// 	}  catch (error) {response.status(500).send(error.message)};
-// })
-
 app.post("/status", async (request, response) => {
 	const { user } = request.headers
 
@@ -168,12 +146,28 @@ app.post("/status", async (request, response) => {
 
 async function removeInactiveParticipants() {
 	const currentTime = Date.now()
-	const inactivityTimeLimit = currentTime - 100000
+	const inactivityTimeLimit = currentTime - 10000
+
+	const arrayOfExitMessages = []
 	
 	try {
 		const inactiveParticipants = await db.collection("participants").find( { lastStatus: { $lt: inactivityTimeLimit } } ).toArray()
 
-		console.log(inactiveParticipants)
+		inactiveParticipants.forEach(participant => {
+			const exitMessage = {
+				from: participant.name,
+				to: "Todos",
+				text: "sai da sala...",
+				type: "status",
+				time: dayjs().format("HH:mm:ss")
+			}
+
+			arrayOfExitMessages.push(exitMessage)
+		} )
+
+		await db.collection("messages").insertOne(arrayOfExitMessages)
+		
+		await db.collection("participants").deleteOne(inactiveParticipants)
 		
 	} catch (error) {res.status(500).send(error.message)}
 }
