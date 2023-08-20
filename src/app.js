@@ -46,14 +46,14 @@ app.post("/participants", async (request, response) => {
     const participantExists = await db.collection("participants").findOne( { name } )
     if (participantExists) return response.status(409).send("Este nome de usuário já existe!")
 
-    await db.collection("participants").insertOne({ name, lastStatus: Date.now() })
-    await db.collection("messages").insertOne({
+    await db.collection("participants").insertOne( { name, lastStatus: Date.now() } )
+    await db.collection("messages").insertOne( {
 		from: name,
 		to: "Todos",
 		text: "entra na sala...",
 		type: "status",
 		time: dayjs().format("HH:mm:ss")
-	})
+	} )
 
     response.sendStatus(201)
   } catch (error) { response.status(500).send(error.message) }
@@ -166,9 +166,22 @@ app.post("/status", async (request, response) => {
 	} catch (error) { response.status(500).send(error.message) }
 })
 
+async function removeInactiveParticipants() {
+	const currentTime = Date.now()
+	const inactivityTimeLimit = currentTime - 100000
+	
+	try {
+		const inactiveParticipants = await db.collection("participants").find( { lastStatus: { $lt: inactivityTimeLimit } } ).toArray()
+
+		console.log(inactiveParticipants)
+		
+	} catch (error) {res.status(500).send(error.message)}
+}
+
+
 // function removeInactiveParticipants() {
 // 	const currentTime = Date.now()
-// 	const inactiveTimeLimit = currentTime - 15000
+// 	const inactiveTimeLimit = currentTime - 10000
   
 // 	const inactiveParticipants = await db.collection("participants").find({ lastStatus: { $lt: inactiveTimeLimit } })
 
@@ -181,8 +194,8 @@ app.post("/status", async (request, response) => {
 // 	  } catch (error) {res.status(500).send(error.message)}
 // 	})
 // }
-  
-// setInterval(removeInactiveParticipants, 15000)
+
+// setInterval(removeInactiveParticipants, 5000)
 
 const PORT = 5000
 app.listen(PORT, () => console.log(`Server active on port ${PORT}.`))
