@@ -166,30 +166,15 @@ async function removeInactiveParticipants() {
 		} )
 
 		await db.collection("messages").insertOne(arrayOfExitMessages)
+
+		const participantsIds = arrayOfExitMessages.map(participant => participant._id)
 		
-		await db.collection("participants").deleteOne(inactiveParticipants)
+		await db.collection("participants").deleteMany( { _id: { $in: participantsIds } } )
 		
 	} catch (error) {res.status(500).send(error.message)}
 }
 
-
-// function removeInactiveParticipants() {
-// 	const currentTime = Date.now()
-// 	const inactiveTimeLimit = currentTime - 10000
-  
-// 	const inactiveParticipants = await db.collection("participants").find({ lastStatus: { $lt: inactiveTimeLimit } })
-
-// 	Participants.remove({ _id: { $in: inactiveParticipants.map(participant => participant._id) } })
-
-// 	inactiveParticipants.forEach(participant => {
-// 	  const message = {from: participant.name, to, text: "sai da sala...", type, time: dayjs().format("HH:mm:ss")}
-
-// 		await db.collection("messages").insertOne(message)
-// 	  } catch (error) {res.status(500).send(error.message)}
-// 	})
-// }
-
-// setInterval(removeInactiveParticipants, 5000)
+setInterval(removeInactiveParticipants, 15000)
 
 const PORT = 5000
 app.listen(PORT, () => console.log(`Server active on port ${PORT}.`))
