@@ -1,6 +1,6 @@
-import express, { json } from "express"
+import express, { json, response } from "express"
 import cors from "cors"
-import { MongoClient, ObjectId } from "mongodb"
+import { MongoClient } from "mongodb"
 import dotenv from "dotenv"
 import joi from "joi"
 import dayjs from "dayjs"
@@ -104,10 +104,6 @@ app.get("/messages", async (request, response) => {
 	const { user } = request.headers
 	const { limit } = request.query
 
-	let isLimitValid
-
-	(limit <= 0 || (isNaN(limit) === true)) ? isLimitValid = false : isLimitValid = true
-
 	try {
 		const messagesForUser = await db.collection("messages").find({ $or: [
 			 { type: "message" },
@@ -117,9 +113,13 @@ app.get("/messages", async (request, response) => {
 			]
 		}).toArray()
 
-		if (isLimitValid === false) { return response.sendStatus(422) }
-
 		if (!limit) { return response.send(messagesForUser) }
+
+		let isLimitValid
+
+		(limit <= 0 || (isNaN(limit) === true)) ? isLimitValid = false : isLimitValid = true
+
+		if (isLimitValid === false) { return response.sendStatus(422) }
 
 		if (limit && isLimitValid === true) {
 			const FilteredMessagesByLimit = messagesForUser.slice(-parseInt(limit)).reverse()
@@ -165,16 +165,16 @@ async function removeInactiveParticipants() {
 			arrayOfExitMessages.push(exitMessage)
 		} )
 
-		await db.collection("messages").insertOne(arrayOfExitMessages)
+		await db.collection("messages").insertMany(arrayOfExitMessages)
 
-		const participantsIds = arrayOfExitMessages.map(participant => participant._id)
+		const participantsIds = inactiveParticipants.map(participant => participant._id)
 		
 		await db.collection("participants").deleteMany( { _id: { $in: participantsIds } } )
 		
-	} catch (error) {res.status(500).send(error.message)}
+	} catch (error) {console.log(error.message)}
 }
 
-setInterval(removeInactiveParticipants, 15000)
+setInterval(removeInactiveParticipants, 2000)
 
 const PORT = 5000
 app.listen(PORT, () => console.log(`Server active on port ${PORT}.`))
